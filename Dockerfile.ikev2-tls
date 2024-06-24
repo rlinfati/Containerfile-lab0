@@ -1,0 +1,26 @@
+FROM registry.fedoraproject.org/fedora:40
+
+USER root
+WORKDIR /tmp/
+
+RUN dnf install --assumeyes strongswan nftables && \
+    systemctl enable strongswan nftables && \
+    dnf clean all
+
+RUN dnf install --assumeyes python3 augeas-libs && \
+    python3 -m venv /opt/certbot/ && \
+    /opt/certbot/bin/pip3 --no-cache-dir install --upgrade pip && \
+    /opt/certbot/bin/pip3 --no-cache-dir install certbot
+
+RUN curl https://rlinfati.github.io/m0-0ca-2024.crt        -o /etc/strongswan/swanctl/x509ca/m0-0ca-2024.crt && \
+    curl https://letsencrypt.org/certs/isrgrootx1.pem      -o /etc/strongswan/swanctl/x509ca/le-root-x1.pem  && \
+    curl https://letsencrypt.org/certs/lets-encrypt-r3.pem -o /etc/strongswan/swanctl/x509ca/le-2021-r3.pem  && \
+    curl https://letsencrypt.org/certs/2024/e5-cross.pem   -o /etc/strongswan/swanctl/x509ca/le-2024-e5.pem  && \
+    curl https://letsencrypt.org/certs/2024/e6-cross.pem   -o /etc/strongswan/swanctl/x509ca/le-2024-e6.pem  && \
+    curl https://letsencrypt.org/certs/2024/r10.pem        -o /etc/strongswan/swanctl/x509ca/le-2024-r10.pem && \
+    curl https://letsencrypt.org/certs/2024/r11.pem        -o /etc/strongswan/swanctl/x509ca/le-2024-r11.pem
+
+RUN sed -i s/default.=.1/default=2\\nnet=1\\nenc=1\\nasn=1\\njob=1\\nike_name=yes/g /etc/strongswan/strongswan.d/charon-systemd.conf  && \
+    echo 'table ip nat { chain postrouting { type nat hook postrouting priority srcnat; policy accept; masquerade; }; };' | tee -a /etc/sysconfig/nftables.conf
+
+ENTRYPOINT /usr/sbin/init

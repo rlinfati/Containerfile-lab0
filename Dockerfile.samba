@@ -1,0 +1,13 @@
+FROM registry.fedoraproject.org/fedora:40
+
+USER root
+WORKDIR /tmp/
+
+RUN dnf install --assumeyes samba-dc krb5-workstation && \
+    systemctl disable systemd-resolved && \
+    systemctl enable samba && \
+    mv /etc/krb5.conf{,.bak} && \
+    ln --symbolic /var/lib/samba/private/krb5.conf /etc/krb5.conf && \
+    dnf clean all
+
+ENTRYPOINT /usr/sbin/init
